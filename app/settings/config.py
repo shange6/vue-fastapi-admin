@@ -6,9 +6,9 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     VERSION: str = "0.1.0"
-    APP_TITLE: str = "Vue FastAPI Admin"
-    PROJECT_NAME: str = "Vue FastAPI Admin"
-    APP_DESCRIPTION: str = "Description"
+    APP_TITLE: str = "济南万通"
+    PROJECT_NAME: str = "济南万通2"
+    APP_DESCRIPTION: str = "济南万通3"
 
     CORS_ORIGINS: typing.List = ["*"]
     CORS_ALLOW_CREDENTIALS: bool = True
@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     PROJECT_ROOT: str = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
     BASE_DIR: str = os.path.abspath(os.path.join(PROJECT_ROOT, os.pardir))
+    UPLOAD_DIR: str = os.path.join(BASE_DIR, "uploads")
     LOGS_ROOT: str = os.path.join(BASE_DIR, "app/logs")
     SECRET_KEY: str = "3488a63e1765035d386f05409663f55c83bfae3b3c61a932744b20ad14244dcf"  # openssl rand -hex 32
     JWT_ALGORITHM: str = "HS256"
@@ -89,6 +90,16 @@ class Settings(BaseSettings):
         "timezone": "Asia/Shanghai",  # Timezone setting
     }
     DATETIME_FORMAT: str = "%Y-%m-%d %H:%M:%S"
+
+    UPLOAD_CONFIG: dict = {
+        "MAX_SIZE": 100 * 1024 * 1024,  # 100MB
+        "ALLOWED_TYPES": [
+            # "image/jpeg", "image/png", "image/svg+xml", "image/gif", "application/pdf", 
+            "text/plain", "text/dxf", "application/dxf", "application/octet-stream"
+        ],
+        "FILE_NAME_PREFIX": "upload_"
+    }
+    
 
 
 settings = Settings()

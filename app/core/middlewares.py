@@ -54,32 +54,41 @@ class HttpAuditLogMiddleware(BaseHTTPMiddleware):
         self.audit_log_paths = ["/api/v1/auditlog/list"]
         self.max_body_size = 1024 * 1024  # 1MB 响应体大小限制
 
-    async def get_request_args(self, request: Request) -> dict:
-        args = {}
-        # 获取查询参数
-        for key, value in request.query_params.items():
-            args[key] = value
+    async def get_request_args(self, request: Request):
+        """
+        适配多请求类型的参数解析（核心修复：处理UploadFile序列化问题）
+        - JSON请求：解析request.json()
+        - 表单/文件上传：解析request.form()，转换UploadFile为可序列化字典
+        - GET请求：解析query参数
+        - 其他：返回空字典
+        """
+        try:
+            content_type = request.headers.get("content-type", "").lower()
 
-        # 获取请求体
-        if request.method in ["POST", "PUT", "PATCH"]:
-            try:
-                body = await request.json()
-                args.update(body)
-            except json.JSONDecodeError:
-                try:
-                    body = await request.form()
-                    # args.update(body)
-                    for k, v in body.items():
-                        if hasattr(v, "filename"):  # 文件上传行为
-                            args[k] = v.filename
-                        elif isinstance(v, list) and v and hasattr(v[0], "filename"):
-                            args[k] = [file.filename for file in v]
-                        else:
-                            args[k] = v
-                except Exception:
-                    pass
+            # 1. GET请求：解析URL查询参数
+            if request.method == "GET":
+                return dict(request.query_params)
 
-        return args
+            # 2. JSON请求（application/json）
+            elif "application/json" in content_type:
+                return await request.json()
+
+            # 3. 表单/文件上传请求（multipart/form-data）【核心修复点】
+            elif "multipart/form-data" in content_type:
+                # 避免在中间件中读取文件上传流，防止后续路由无法获取文件
+                return {"msg": "Multipart data hidden for upload"}
+
+            # 4. 普通表单请求（application/x-www-form-urlencoded）
+            elif "application/x-www-form-urlencoded" in content_type:
+                return dict(await request.form())
+
+            # 5. 其他类型请求（如纯文本）
+            else:
+                return {}
+
+        except Exception as e:
+            logger.error(f"解析请求参数异常: {str(e)}", exc_info=True)
+            return {}
 
     async def get_response_body(self, request: Request, response: Response) -> Any:
         # 检查Content-Length

@@ -10,9 +10,13 @@
       </div>
 
       <div w-320 flex-col px-20 py-35>
-        <h5 f-c-c text-24 font-normal color="#6a6a6a">
-          <icon-custom-logo mr-10 text-50 color-primary />{{ $t('app_name') }}
-        </h5>
+        <!-- <h5 f-c-c text-24 font-normal color="#6a6a6a"> -->
+          <!-- <icon-custom-logo mr-10 text-50 color-primary />{{ $t('app_name') }} -->
+        <!-- </h5> -->
+        <div flex row items-center gap-10>
+          <img src="/public/wt_logo_large_3d.svg" alt="logo" style="width: 80px; height: 70px;"/>
+          <img src="/public/wt_text_large_3d.svg" alt="logo" style="width: 190px; height: 70px;"/>
+        </div>
         <div mt-30>
           <n-input
             v-model:value="loginInfo.username"

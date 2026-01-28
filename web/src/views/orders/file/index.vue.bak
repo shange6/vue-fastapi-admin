@@ -1,0 +1,332 @@
+<template>
+  <div class="upload-wrapper">
+    <div class="upload-background">
+      <input
+        type="file"
+        ref="fileInput"
+        class="hidden-input"
+        @change="handleFileChange"
+        accept=".dwg,.dxf"
+      />
+
+      <div 
+        class="upload-area" 
+        :class="{ 
+          'is-loading': loading, 
+          'is-dragover': isDragOver 
+        }"
+        @click="triggerFileInput"
+        @dragover.prevent="onDragOver"
+        @dragleave.prevent="isDragOver = false"
+        @drop.prevent="onDrop"
+      >
+        <div v-if="!loading" class="upload-content">
+          <i class="upload-icon">+</i>
+          <p class="upload-text">点击选择文件<p></p>
+            或拖拽文件上传</p>
+          <p class="upload-hint">支持 DWG, DXF (最大 2MB)</p>
+        </div>
+        
+        <div v-else class="loader-content">
+          <div class="spinner"></div>
+          <p>正在上传...</p>
+        </div>
+      </div>
+    </div>
+    <transition name="fade">
+      <div v-if="uploadStatus" :class="['status-msg', uploadStatus.type]">
+        {{ uploadStatus.text }}
+      </div>
+    </transition>
+    <div v-if="uploadResult" class="info-card">
+      <div class="card-header">
+        <label  class="project-tag">合同号: {{ uploadResult.合同号 || '-' }}</label>
+        <h3 class="project-title">{{ uploadResult.项目名称 || '未命名项目' }}</h3>
+      </div>
+      
+      <div class="card-grid">
+        <div class="info-item">
+          <label>部件名称</label>
+          <span class="highlight">{{ uploadResult.部件名称 || '-' }}</span>
+        </div>
+        <div class="info-item">
+          <label>文件编号</label>
+          <span>{{ uploadResult.部件编号 || '-' }}</span>
+        </div>
+        <div class="info-item">
+          <label>文件数量</label>
+          <span>
+            共 <span class="count">{{ uploadResult.文件个数 ?? 0 }}</span> 个表格
+          </span>
+        </div>
+        <div class="info-item">
+          <label>零件数量</label>
+          <span class="count">{{ uploadResult?.data instanceof Array ? uploadResult.data.length : 0 }}</span>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+  <div>
+
+
+
+
+    
+  </div>
+
+
+
+
+
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import { request } from '@/utils/http/index.js'
+
+const fileInput = ref(null)
+const loading = ref(false)
+const isDragOver = ref(false) // 拖拽状态
+const uploadStatus = ref(null)
+
+const triggerFileInput = () => !loading.value && fileInput.value.click()
+const uploadResult = ref(null)
+// 核心逻辑抽离，复用给点击上传和拖拽上传
+const processUpload = async (file) => {
+  if (!file) return
+
+  // 格式校验 (虽然 input 有 accept，但拖拽需要手动校验)
+  const isCAD = /\.(dwg|dxf)$/i.test(file.name)
+  if (!isCAD) {
+    showFeedback('只支持 DWG 或 DXF 格式文件', 'error')
+    return
+  }
+
+  if (file.size > 2 * 1024 * 1024) {
+    showFeedback('文件不能超过 2MB', 'error')
+    return
+  }
+
+  const formData = new FormData()
+  formData.append('file', file)
+
+  loading.value = true
+  uploadStatus.value = null
+
+  try {
+    const res = await request({
+      url: '/orders/file',
+      method: 'post',
+      data: formData,
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+
+    if (res.code === 200 || res.success) {
+      showFeedback('上传成功！', 'success')
+      uploadResult.value = res.data
+    } else {
+      throw new Error(res.msg || '上传失败')
+    }
+  } catch (error) {
+    showFeedback(error.message || '网络请求错误', 'error')
+  } finally {
+    loading.value = false
+    if (fileInput.value) fileInput.value.value = '' 
+  }
+}
+
+// 处理点击上传
+const handleFileChange = (e) => {
+  const file = e.target.files[0]
+  processUpload(file)
+}
+
+// 处理拖拽移入
+const onDragOver = () => {
+  if (!loading.value) isDragOver.value = true
+}
+
+// 处理放下文件
+const onDrop = (e) => {
+  isDragOver.value = false
+  if (loading.value) return
+  
+  const file = e.dataTransfer.files[0]
+  processUpload(file)
+}
+
+const showFeedback = (text, type) => {
+  uploadStatus.value = { text, type }
+}
+</script>
+
+<style scoped>
+.upload-wrapper {
+  max-width: 300px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* background-color: #f56c6c; */
+}
+
+.upload-background {
+  border-radius: 0 !important;
+  background-color: #f43f5e;
+}
+
+.hidden-input {
+  display: none;
+}
+
+/* 上传区域样式 */
+.upload-area {
+  border: 2px dashed #dcdfe6;
+  border-radius: 10px;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #d0e4d4;
+}
+
+.upload-area:hover {
+  border-color: #409eff;
+  background: #f5f7fa;
+}
+
+.upload-area.is-loading {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* 内容布局 */
+.upload-icon {
+  font-size: 30px;
+  /* color: #909399; */
+  font-style: normal;
+}
+
+.upload-text {
+  margin: 0px 40px 5px;
+  padding: auto;
+  color: #303133;
+  /* color: skyblue; */
+  background-color: skyblue;
+  font-weight: 500;
+}
+
+.upload-hint {
+  font-size: 12px;
+  color: #909399;
+}
+
+/* 加载动画 */
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #409eff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 10px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 消息提示 */
+.status-msg {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.status-msg.success { background: #f0f9eb; color: #67c23a; }
+.status-msg.error { background: #fef0f0; color: #f56c6c; }
+
+.fade-enter-active, .fade-leave-active { transition: opacity 0.5s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.info-card {
+  margin-top: 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #eef2f7;
+  overflow: hidden;
+  max-width: 400px; /* 可根据需要调整宽度 */
+  transition: transform 0.3s ease;
+}
+
+.info-card:hover {
+  transform: translateY(-2px);
+}
+
+.card-header {
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.project-tag {
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.18);
+  padding: 0px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  /* text-align: right; 
+  margin-left: auto;
+  justify-content: flex-end; */
+}
+
+.project-title {
+  margin: 8px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 两列布局 */
+  gap: 1px;
+  background: #f0f2f5; /* 间隙色，模拟细边框 */
+}
+
+.info-item {
+  background: white;
+  padding: 15px 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.info-item.full-width {
+  grid-column: span 2;
+}
+
+.info-item label {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 4px;
+}
+
+.info-item span {
+  font-size: 14px;
+  color: #303133;
+  font-weight: 500;
+}
+
+.info-item .highlight {
+  color: #409eff;
+}
+
+.info-item .count {
+  font-size: 18px;
+  color: #f56c6c;
+  font-family: 'Monaco', monospace;
+}
+</style>

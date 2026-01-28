@@ -1,6 +1,10 @@
 <template>
   <router-link h-60 f-c-c to="/">
-    <icon-custom-logo text-36 color-primary></icon-custom-logo>
+    <!-- <icon-custom-logo text-36 color-primary></icon-custom-logo> -->
+    <div flex row items-center gap-10>
+      <img src="/public/wt_logo_large_3d.svg" alt="logo" style="width: 50px; height: 50px;"/>
+      <img src="/public/wt_text_large_3d.svg" alt="logo" style="width: 120px; height: 50px;"/>
+    </div>
     <h2
       v-show="!appStore.collapsed"
       ml-2
